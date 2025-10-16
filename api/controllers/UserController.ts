@@ -457,11 +457,13 @@ class UserController {
             const user = await UserDAO.read(userId);
             if (!user){
                 res.status(404).json({ message: "Usuario no encontrado" });
+                return;
             } 
 
             const passwordMatch = await bcrypt.compare(req.body.password, user.password);
             if (!passwordMatch) {
                 res.status(401).json({ message: "Contraseña incorrecta" });
+                return;
             }
 
             //await TaskDAO.deleteByUserId(user._id);
