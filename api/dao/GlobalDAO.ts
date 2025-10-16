@@ -8,7 +8,7 @@ import { Model, Document, FilterQuery, UpdateQuery } from "mongoose";
  *
  * @template T - The type of the Mongoose document
  */
-export default class GlobalDao<T extends Document> {
+export default class GlobalDAO<T extends Document> {
   protected model: Model<T>;
 
   constructor(model: Model<T>) {

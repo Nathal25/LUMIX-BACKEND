@@ -1,4 +1,4 @@
-import GlobalDao from "./GlobalDao";
+import GlobalDao from "./GlobalDAO";
 import User, { IUserDocument } from "../models/User"; // ajusta la ruta y exporta IUserDocument en tu modelo
 import { FilterQuery } from "mongoose";
 
