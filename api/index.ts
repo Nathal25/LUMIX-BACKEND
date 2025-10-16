@@ -1,65 +1,59 @@
-import express, { Request, Response } from "express";
+import express from "express";
 import cors from "cors";
-import { createClient } from "pexels";
 import "dotenv/config";
+import db from "./config/database";
+import routes from "./routes/routes";
+import cookieParser from 'cookie-parser';
 
-/**
-* HTTP server to expose endpoints that query the Pexels API.
-* - GET / => Healthcheck
-* - GET /videos/popular => List of popular videos (per_page = 3)
-*/
 const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 /**
-* CORS configuration.
-* If ORIGIN exists, it is parsed as a comma-separated list.
-* If it doesn't, consider using cors() without 'origin' in development to allow all.
-*/
+ * Middleware configuration
+ * - Parse JSON request bodies
+ * - Parse URL-encoded request bodies
+ * - Enable Cross-Origin Resource Sharing (CORS)
+ */
 const allowedOrigins = process.env.ORIGIN?.split(",").map(s => s.trim()).filter(Boolean);
 app.use(
   // allowedOrigins && allowedOrigins.length > 0
   //   ? cors({ origin: allowedOrigins })
   //   : cors() 
+  cors({ 
+    origin: allowedOrigins, // Permitir localhost y el dominio de producción
+    credentials: true // Permitir el envío de cookies
+}));
 
-  cors({ origin: allowedOrigins })
-);
-
-app.use(express.json());
-
-/** Listening port. */
-const PORT = Number(process.env.PORT);
-
-/** Official Pexels client initialized with the API key. */
-const client = createClient(process.env.PEXELS_API_KEY as string);
+// Permitir el envío de cookies
+app.use(cookieParser());
 
 /**
-* GET /videos/popular
-* Returns the Pexels JSON of popular videos.
-* Currently fixed at per_page: 3.
-*
-* Responses:
-* - 200 OK: JSON object as returned by Pexels.
-* - 500 : { error: "Failed to fetch popular videos" }
-*/
-app.get("/videos/popular", async (req: Request, res: Response) => {
-  try {
-    const data = await client.videos.popular({ per_page: 3 });
-    res.json(data);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch popular videos" });
-  }
-});
+ * Initialize database connection.
+ * Exits the process if the connection fails.
+ */
+db.connectDB();
 
 /**
-* GET /
-* Simple healthcheck to verify that the server is up.
-*/
-app.get("/", (_req: Request, res: Response) => {
-  res.send("Server running");
-});
+ * Mount the API routes.
+ * All feature routes are grouped under `/api/v1`.
+ */
+app.use("/api/v1", routes);
 
-/** Server start. */
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+/**
+ * Health check endpoint.
+ * Useful to verify that the server is up and running.
+ */
+app.get("/", (req, res) => res.send("Server is running"));
+
+/**
+ * Start the server only if this file is run directly
+ * (prevents multiple servers when testing with imports).
+ */
+if (require.main === module) {
+    const PORT = process.env.PORT || 3000;
+
+    app.listen(PORT, () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+    });
+}
