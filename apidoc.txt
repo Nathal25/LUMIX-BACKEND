@@ -1,0 +1,61 @@
+---------------------------------
+crear review
+
+POST
+
+http://localhost:3000/api/v1/reviews/
+
+{
+  "userId": "68f0a45ae1649158cba23699",
+  "movieId": "10253223",
+  "comment": "Una película con paisajes increíbles y una edición espectacular.",
+  "rating": 4
+}
+
+---------------------------------
+obtener reviews por id de usuario
+
+GET
+
+http://localhost:3000/api/v1/reviews/user/id
+
+no lleva body
+
+requiere tener el token en el header (requiere autentificacion)
+
+---------------------------------
+obtener todas las reviews por el id de una pelicula
+
+GET
+
+http://localhost:3000/api/v1/reviews/movie/id
+
+no lleva body
+
+no requiere autentificacion
+
+---------------------------------
+traer peliculas populares  carga de 10 en 10
+
+GET
+
+http://localhost:3000/api/v1/pexels/popular
+
+no lleva body
+
+no requiere auth
+
+---------------------------------------
+buscar pelicula por palabras clave
+
+GET
+
+http://localhost:3000/api/v1/pexels/search/?query=city&per_page=5
+
+no lleva body (los parametros van en la url)
+
+no requiere auth
+
+
+
+
