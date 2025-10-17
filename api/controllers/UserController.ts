@@ -356,12 +356,12 @@ class UserController {
     */
     async getLoggedUser(req: Request, res: Response): Promise<void> {
         try {
-            const authReq = req as Request & { userId?: string }; // Extend the request type to include userId
+            const authReq = req as Request & { userId?: string };
             const userId = authReq.userId;
 
             if (!userId) {
                 res.status(401).json({ message: "No se proporcionó un token" });
-                return
+                return;
             }
 
             const user = await UserDAO.read(userId);
@@ -373,13 +373,18 @@ class UserController {
             const { password, resetPasswordToken, resetPasswordExpires, ...safe } =
                 user.toObject ? user.toObject() : user;
 
-            res.status(200).json(safe);
+                
+            res.status(200).json({ 
+                user: {
+                    id: safe._id,
+                    ...safe
+                }
+            });
         } catch (error: any) {
             console.error(error);
             res.status(500).json({ message: "Error getting user information" });
         }
     }
-
     /** Edits the information of the currently authenticated user.
      * Allows updating fields like firstName, lastName, age, and email.
      * Requires a valid JWT token for authentication.
