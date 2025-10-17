@@ -242,8 +242,8 @@ class UserController {
             if (!origins || origins.length === 0) {
                 throw new Error("No se encontró ninguna URL válida en la variable ORIGIN");
             }
-            const baseUrl = origins[0] as string; // Use the first valid origin (Change in production for 1)
-            const resetUrl = `${baseUrl}/#/recover-password?token=${token}&email=${user.email}`;
+            const baseUrl = origins[1] as string; // Use the first valid origin (Change in production for 1)
+            const resetUrl = `${baseUrl}/recover-password?token=${token}&email=${user.email}`;
 
             // 5) Configurar email con SendGrid
             const msg: sgMail.MailDataRequired = {
