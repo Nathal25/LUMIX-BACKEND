@@ -6,17 +6,12 @@ import sgMail from "@sendgrid/mail";
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY as string);
 
-//const nodemailer = require("nodemailer");
-//const TaskDAO = require("../dao/TaskDAO");
-
 /**
  * UserController
  *
  * Handles user-specific logic such as registration, login, and password validation for the Taskly backend.
- * Extends GlobalController to inherit generic CRUD operations, but overrides and adds methods for user management.
  *
  * @class UserController
- * @extends GlobalController
 */
 class UserController {
     /**
@@ -50,7 +45,7 @@ class UserController {
             // Call the create method directly from UserDAO
             const newUser = await UserDAO.create(req.body);
             res.status(201).json({ id: newUser._id });
-        } catch (error) {
+        } catch (error: any) {
             // Show detailed error only in development
             if (process.env.NODE_ENV === "development") {
                 console.error(error);
@@ -156,7 +151,7 @@ class UserController {
 
             // Successful login
             res.status(200).json({ message: "Login successful", id: user._id, email: user.email });
-        } catch (error) {
+        } catch (error: any) {
             // Show detailed error only in development
             if (process.env.NODE_ENV === "development") {
                 console.error(error);
@@ -373,8 +368,8 @@ class UserController {
             const { password, resetPasswordToken, resetPasswordExpires, ...safe } =
                 user.toObject ? user.toObject() : user;
 
-                
-            res.status(200).json({ 
+
+            res.status(200).json({
                 user: {
                     id: safe._id,
                     ...safe
@@ -460,10 +455,10 @@ class UserController {
             }
 
             const user = await UserDAO.read(userId);
-            if (!user){
+            if (!user) {
                 res.status(404).json({ message: "Usuario no encontrado" });
                 return;
-            } 
+            }
 
             const passwordMatch = await bcrypt.compare(req.body.password, user.password);
             if (!passwordMatch) {
@@ -474,10 +469,16 @@ class UserController {
             //await TaskDAO.deleteByUserId(user._id);
             await UserDAO.delete(user._id as string);
 
+            // Define secure type to process.env.JWT_SECRET
+            const COOKIE_CONTROL = process.env.COOKIE_CONTROL as string;
+            if (!COOKIE_CONTROL) {
+                throw new Error("COOKIE_CONTROL no está definido en las variables de entorno");
+            }
+            
             res.clearCookie('token', {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'none',
+                sameSite: COOKIE_CONTROL as "none" | "lax" | "strict",
             });
 
             res.status(200).json({ message: "Usuario eliminado" });
