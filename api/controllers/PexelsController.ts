@@ -1,33 +1,38 @@
-import { Request, Response } from "express";
-import { searchVideos, getPopularVideos } from "../services/pexelsService";
+// import { Request, Response } from "express";
+// import { searchVideos, getPopularVideos } from "../services/pexelsService";
+// import MovieController from "./MovieController";
 
-class PexelsController {
-  static async searchMedia(req: Request, res: Response) {
-    try {
-      const { query, per_page } = req.query;
+// class PexelsController {
+//   static async searchMedia(req: Request, res: Response) {
+//     try {
+//       if (!req.body.category) {
+//         return res.status(400).json({ message: "Debes proporcionar un término de búsqueda (query)." });
+//       }
 
-      if (!query) {
-        return res.status(400).json({ message: "Debes proporcionar un término de búsqueda (query)." });
-      }
+//       const results = await searchVideos(String(req.body.category), Number(req.body.pages) || 10);
+//       res.status(200).json(results);
+//     } catch (error) {
+//       console.error("Error al buscar en Pexels:", error);
+//       res.status(500).json({ message: "Error al comunicarse con Pexels." });
+//     }
+//   }
 
-      const results = await searchVideos(String(query), Number(per_page) || 10);
-      res.status(200).json(results);
-    } catch (error) {
-      console.error("Error al buscar en Pexels:", error);
-      res.status(500).json({ message: "Error al comunicarse con Pexels." });
-    }
-  }
+//   static async getPopularVideos(req: Request, res: Response) {
+//     try {
+//       const results = await getPopularVideos(Number(req.body.pages) || 3);
 
-  static async getPopularVideos(req: Request, res: Response) {
-    try {
-      const { per_page } = req.query;
-      const results = await getPopularVideos(Number(per_page) || 10);
-      res.status(200).json(results);
-    } catch (error) {
-      console.error("Error al obtener videos populares:", error);
-      res.status(500).json({ message: "Error al comunicarse con Pexels." });
-    }
-  }
-}
+//       const movies = [];
+//       for (const video of results) {
+//         const movie = await MovieController.createMovieFromPexelsData(video);
+//         movies.push(movie);
+//       }
 
-export default PexelsController;
+//       res.status(200).json(movies);
+//     } catch (error) {
+//       console.error("Error al obtener videos populares:", error);
+//       res.status(500).json({ message: "Error al comunicarse con Pexels." });
+//     }
+//   }  
+// }
+
+// export default PexelsController;
