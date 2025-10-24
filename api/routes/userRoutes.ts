@@ -114,6 +114,11 @@ router.get("/check-token", authenticateToken, (req, res) => {
 
 router.delete("/me", authenticateToken, (req, res) => UserController.deleteLoggedUser(req, res));
 
+
+
+router.patch('/change-password', authenticateToken, (req, res) => UserController.changePassword(req, res));
+
+
 /**
  * Export the router instance to be mounted in the main routes file.
  */
