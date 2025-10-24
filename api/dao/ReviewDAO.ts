@@ -63,7 +63,7 @@ class ReviewDAO extends GlobalDao<IReviewDocument> {
 
 
   /**
-   * Busca una reseña específica por usuario y película.
+   * searches for a review by userId and movieId.
    */
   async findByUserAndMovie(userId: string, movieId: string): Promise<IReviewDocument | null> {
     return Review.findOne({ userId, movieId });

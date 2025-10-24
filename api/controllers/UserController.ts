@@ -240,10 +240,10 @@ class UserController {
             const baseUrl = origins[1] as string; // Use the first valid origin (Change in production for 1)
             const resetUrl = `${baseUrl}/recover-password?token=${token}&email=${user.email}`;
 
-            // 5) Configurar email con SendGrid
+            // 5) Configure the email content
             const msg: sgMail.MailDataRequired = {
                 to: user.email,
-                from: process.env.EMAIL_USER as string, // remitente verificado en SendGrid
+                from: process.env.EMAIL_USER as string, // verified sender in SendGrid
                 subject: "Recuperar contraseña - Lumix",
                 html: `
         <div style="font-family: Arial, sans-serif; color: #333;">
@@ -263,7 +263,7 @@ class UserController {
       `,
             };
 
-            // 6) Enviar correo con SendGrid
+            // 6) Send email with SendGrid
             await sgMail.send(msg);
             console.log(" Correo enviado exitosamente a:", user.email);
             res.status(200).json({ message: "Password reset email sent" });
@@ -345,7 +345,9 @@ class UserController {
     }
 
     /**
-    * Obtiene la información del usuario autenticado.
+    * Gets the information of the currently authenticated user.
+    *
+    * - Validates the JWT token from the request to identify the user.
     * @param {Object} req - Express request object.
     * @param {Object} res - Express response object.
     */
