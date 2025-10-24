@@ -1,30 +1,30 @@
 import mongoose, { Document, Schema, Model } from "mongoose";
 
 /**
- * Interface base que define las propiedades de una reseña.
+ * Base interface representing a review.
  */
 export interface IReview {
-  userId: mongoose.Types.ObjectId; // referencia al usuario que hace la reseña
-  movieId: string;                 // ID de la película (de Pexels o Cloudinary)
-  comment: string;                 // comentario del usuario
-  rating: number;                  // calificación de 1 a 5
+  userId: mongoose.Types.ObjectId; // reference to the user making the review
+  movieId: string;                 // ID of the movie (from Pexels or Cloudinary)
+  comment: string;                 // user's comment
+  rating: number;                  // rating from 1 to 5
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 /**
- * Interfaz que representa un documento de reseña en Mongoose.
+ * Interface representing a Mongoose review document.
  */
 export interface IReviewDocument extends IReview, Document {}
 
 /**
  * @typedef {Object} Review
- * @property {ObjectId} userId - ID del usuario que hizo la reseña (referencia a la colección "User").
- * @property {string} movieId - ID de la película (de Pexels o Cloudinary).
- * @property {string} comment - Comentario del usuario. **Obligatorio.**
- * @property {number} rating - Calificación entre 1 y 5. **Obligatorio.**
- * @property {Date} createdAt - Fecha de creación.
- * @property {Date} updatedAt - Última fecha de actualización.
+ * @property {ObjectId} userId - ID of the user who made the review (reference to the "User" collection).
+ * @property {string} movieId - ID of the movie (from Pexels or Cloudinary).
+ * @property {string} comment - User's comment. **Required.**
+ * @property {number} rating - Rating from 1 to 5. **Required.**
+ * @property {Date} createdAt - Creation date.
+ * @property {Date} updatedAt - Last update date.
  */
 const ReviewSchema: Schema<IReviewDocument> = new Schema(
   {
@@ -55,12 +55,12 @@ const ReviewSchema: Schema<IReviewDocument> = new Schema(
 );
 
 /**
- * Índice compuesto para evitar que un mismo usuario reseñe la misma película varias veces.
+ * Index to ensure a user can only review a specific movie once.
  */
 ReviewSchema.index({ userId: 1, movieId: 1 }, { unique: true });
 
 /**
- * Modelo de Mongoose para 'Review'.
+ * Mongoose model for 'Review'.
  */
 const Review: Model<IReviewDocument> = mongoose.model<IReviewDocument>("Review", ReviewSchema);
 

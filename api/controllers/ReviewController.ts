@@ -2,37 +2,37 @@ import { Request, Response } from "express";
 import ReviewDAO from "../dao/ReviewDAO";
 
 /**
- * Controller encargado de gestionar las reseñas (reviews) de películas.
+ * Controller in charge of managing movie reviews.
  * 
- * Este controlador maneja:
- * - Creación de nuevas reseñas.
- * - Obtención de reseñas por película o usuario.
- * - Cálculo del promedio de calificaciones.
- * - Actualización y eliminación de reseñas existentes.
+ * This controller provides the following functionalities:
+ * - Creation of new reviews.
+ * - Retrieval of reviews by movie or user.
+ * - Calculation of average ratings.
+ * - Update and deletion of existing reviews.
  */
 class ReviewController {
   /**
-   * Crea una nueva reseña para una película.
+   * Creates a new review for a movie.
    * 
    * @route POST /api/reviews
-   * @param {Request} req - Objeto de solicitud HTTP.
-   * @param {Response} res - Objeto de respuesta HTTP.
+   * @param {Request} req - HTTP request object.
+   * @param {Response} res - HTTP response object.
    * 
-   * @bodyParam {string} userId - ID del usuario que crea la reseña.
-   * @bodyParam {string} movieId - ID de la película (por ejemplo, de Pexels).
-   * @bodyParam {string} comment - Texto de la reseña.
-   * @bodyParam {number} rating - Calificación del usuario (ejemplo: 4.5).
+   * @bodyParam {string} userId - user ID of the reviewer.
+   * @bodyParam {string} movieId - ID of the movie (e.g., from Pexels).
+   * @bodyParam {string} comment - Text of the review.
+   * @bodyParam {number} rating - User rating (e.g., 4.5).
    * 
    * @returns {Promise<void>}
    * 
    * @description
-   * - Previene que un usuario reseñe la misma película más de una vez.  
-   * - Devuelve la reseña creada si la operación es exitosa.  
-   * - Respuestas posibles:
-   *   - 201: Reseña creada exitosamente.
-   *   - 400: Faltan campos obligatorios.
-   *   - 409: Ya existe una reseña para esa película del mismo usuario.
-   *   - 500: Error interno del servidor.
+   * - Prevents a user from reviewing the same movie multiple times.
+   * - Returns the created review if the operation is successful.
+   * - Possible responses:
+   *   - 201: Review created successfully.
+   *   - 400: Missing required fields.
+   *   - 409: A review for this movie by the same user already exists.
+   *   - 500: Internal server error.
    */
   async create(req: Request, res: Response): Promise<void> {
     try {
@@ -57,22 +57,22 @@ class ReviewController {
   }
 
   /**
-   * Obtiene todas las reseñas asociadas a una película.
+   * Gets all reviews for a specific movie.
    * 
    * @route GET /api/reviews/movie/:movieId
-   * @param {Request} req - Objeto de solicitud HTTP.
-   * @param {Response} res - Objeto de respuesta HTTP.
+   * @param {Request} req - HTTP request object.
+   * @param {Response} res - HTTP response object.
    * 
-   * @paramParam {string} movieId - ID de la película a consultar.
+   * @paramParam {string} movieId - ID of the movie to query.
    * 
    * @returns {Promise<void>}
    * 
    * @description
-   * - Devuelve un arreglo con todas las reseñas de la película especificada.  
-   * - Respuestas posibles:
-   *   - 200: Reseñas encontradas.
-   *   - 404: No hay reseñas para la película indicada.
-   *   - 500: Error interno del servidor.
+   * - Returns an array of all reviews for the specified movie.
+   * - Possible responses:
+   *   - 200: Reviews found.
+   *   - 404: No reviews for the specified movie.
+   *   - 500: Internal server error.
    */
   async getByMovie(req: Request, res: Response): Promise<void> {
     try {
@@ -91,22 +91,22 @@ class ReviewController {
   }
 
   /**
-   * Obtiene todas las reseñas creadas por un usuario.
+   * Gets all reviews created by a user.
    * 
    * @route GET /api/reviews/user/:userId
-   * @param {Request} req - Objeto de solicitud HTTP.
-   * @param {Response} res - Objeto de respuesta HTTP.
+   * @param {Request} req - HTTP request object.
+   * @param {Response} res - HTTP response object.
    * 
-   * @paramParam {string} userId - ID del usuario del cual se quieren obtener las reseñas.
+   * @paramParam {string} userId - ID of the user whose reviews are to be retrieved.
    * 
    * @returns {Promise<void>}
    * 
    * @description
-   * - Devuelve todas las reseñas realizadas por un usuario específico.  
-   * - Respuestas posibles:
-   *   - 200: Reseñas encontradas.
-   *   - 404: El usuario no ha realizado ninguna reseña.
-   *   - 500: Error interno del servidor.
+   * - Returns all reviews made by a specific user.
+   * - Possible responses:
+   *   - 200: Reviews found.
+   *   - 404: User has not made any reviews.
+   *   - 500: Internal server error.
    */
   async getByUser(req: Request, res: Response): Promise<void> {
     try {
@@ -125,21 +125,21 @@ class ReviewController {
   }
 
   /**
-   * Obtiene el promedio de calificaciones de una película.
+   * Gets the average rating of a movie.
    * 
    * @route GET /api/reviews/movie/:movieId/average
-   * @param {Request} req - Objeto de solicitud HTTP.
-   * @param {Response} res - Objeto de respuesta HTTP.
+   * @param {Request} req - HTTP request object.
+   * @param {Response} res - HTTP response object.
    * 
-   * @paramParam {string} movieId - ID de la película.
+   * @paramParam {string} movieId - ID of the movie.
    * 
    * @returns {Promise<void>}
    * 
    * @description
-   * - Calcula el promedio de todas las calificaciones (`rating`) de una película.  
-   * - Respuestas posibles:
-   *   - 200: Promedio calculado correctamente.
-   *   - 500: Error interno del servidor.
+   * - Calculates the average of all ratings (`rating`) for a movie.
+   * - Possible responses:
+   *   - 200: Average calculated successfully.
+   *   - 500: Internal server error.
    */
   async getAverageRating(req: Request, res: Response): Promise<void> {
     try {
@@ -152,25 +152,25 @@ class ReviewController {
   }
 
   /**
-   * Actualiza una reseña existente de un usuario para una película específica.
+   * Updates an existing review by a user for a specific movie.
    * 
    * @route PUT /api/reviews
-   * @param {Request} req - Objeto de solicitud HTTP.
-   * @param {Response} res - Objeto de respuesta HTTP.
+   * @param {Request} req - HTTP request object.
+   * @param {Response} res - HTTP response object.
    * 
-   * @bodyParam {string} userId - ID del usuario que hizo la reseña.
-   * @bodyParam {string} movieId - ID de la película reseñada.
-   * @bodyParam {string} [comment] - Nuevo comentario (opcional).
-   * @bodyParam {number} [rating] - Nueva calificación (opcional).
+   * @bodyParam {string} userId - ID of the user who made the review.
+   * @bodyParam {string} movieId - ID of the reviewed movie.
+   * @bodyParam {string} [comment] - New comment (optional).
+   * @bodyParam {number} [rating] - New rating (optional).
    * 
    * @returns {Promise<void>}
    * 
    * @description
-   * - Permite modificar una reseña existente según el usuario y la película.  
-   * - Respuestas posibles:
-   *   - 200: Reseña actualizada correctamente.
-   *   - 404: No se encontró la reseña.
-   *   - 500: Error interno del servidor.
+   * - Allows modifying an existing review based on the user and the movie.
+   * - Possible responses:
+   *   - 200: Review updated successfully.
+   *   - 404: Review not found.
+   *   - 500: Internal server error.
    */
   async update(req: Request, res: Response): Promise<void> {
     try {
@@ -189,21 +189,21 @@ class ReviewController {
   }
 
   /**
-   * Elimina una reseña específica por su ID.
+   * Deletes a specific review by its ID.
    * 
    * @route DELETE /api/reviews/:id
-   * @param {Request} req - Objeto de solicitud HTTP.
-   * @param {Response} res - Objeto de respuesta HTTP.
+   * @param {Request} req - HTTP request object.
+   * @param {Response} res - HTTP response object.
    * 
-   * @paramParam {string} id - ID de la reseña a eliminar.
+   * @paramParam {string} id - ID of the review to delete.
    * 
    * @returns {Promise<void>}
    * 
    * @description
-   * - Elimina una reseña según su ID.  
-   * - Respuestas posibles:
-   *   - 200: Reseña eliminada correctamente.
-   *   - 500: Error interno del servidor.
+   * - Deletes a review by its ID.
+   * - Possible responses:
+   *   - 200: Review deleted successfully.
+   *   - 500: Internal server error.
    */
   async delete(req: Request, res: Response): Promise<void> {
     try {
