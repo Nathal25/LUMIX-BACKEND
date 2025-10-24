@@ -488,7 +488,85 @@ class UserController {
             res.status(500).json({ message: "Error al eliminar el usuario" });
         }
     }
+
+        /**
+     * Changes the password of the currently authenticated user.
+     *
+     * @async
+     * @function changePassword
+     * @memberof UserController
+     * @description
+     * - Validates the JWT token from the request to identify the user.
+     * - Verifies the current password matches the user's stored password.
+     * - Validates the new password meets security requirements.
+     * - Hashes and updates the new password in the database.
+     *
+     * @param {import('express').Request} req - Express request object.
+     * @param {import('express').Response} res - Express response object.
+     *
+     * @body {string} currentPassword - The user's current password for verification.
+     * @body {string} password - The new password to set.
+     * @body {string} confirmPassword - Confirmation of the new password.
+     *
+     * @returns {Promise<void>}
+     * @throws {401} If no token is provided or if the current password is incorrect.
+     * @throws {404} If the user is not found.
+     * @throws {400} If password validation fails.
+     * @throws {500} If an unexpected server error occurs.
+     */
+    async changePassword(req: Request, res: Response): Promise<void> {
+        try {
+            const authReq = req as Request & { userId?: string };
+            const userId = authReq.userId;
+
+            if (!userId) {
+                res.status(401).json({ message: "No se proporcionó un token" });
+                return;
+            }
+
+            const user = await UserDAO.read(userId);
+            if (!user) {
+                res.status(404).json({ message: "Usuario no encontrado" });
+                return;
+            }
+
+            // Verify current password
+            const passwordMatch = await bcrypt.compare(req.body.currentPassword, user.password);
+            if (!passwordMatch) {
+                res.status(401).json({ message: "La contraseña actual es incorrecta" });
+                return;
+            }
+
+            // Validate new password and confirmPassword match
+            const passwordError = this.passwordValidation(req);
+            if (passwordError) {
+                res.status(400).json({ message: passwordError });
+                return;
+            }
+
+            // Hash the new password
+            await this.hashPassword(req);
+            user.password = req.body.password;
+
+            // Update the user in the database
+            await UserDAO.update(user._id as string, user);
+
+            res.status(200).json({ message: "Contraseña cambiada exitosamente" });
+
+        } catch (error: any) {
+            // Show detailed error only in development
+            if (process.env.NODE_ENV === "development") {
+                console.error(error);
+            }
+            res.status(500).json({ message: "Error al cambiar la contraseña" });
+        }
+    }
+
+
 }
+
+
+
 
 // Export an instance of the UserController
 export default new UserController();
