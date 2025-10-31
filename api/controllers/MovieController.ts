@@ -1,176 +1,150 @@
 import { Request, Response } from "express";
 import MovieDAO from "../dao/MovieDAO";
+import { searchVideos, getPopularVideos } from "../services/pexelsService";
 
-/**
- * Controller responsible for generating subtitles in different languages.
- * It can return English subtitles based on the movie title
- * or translate them into Spanish using the Hugging Face translation API.
- */
-class SubtitleController {
-  /** Hugging Face translation model URL (English → Spanish). */
-  private readonly HF_API_URL =
-    "https://api-inference.huggingface.co/models/Helsinki-NLP/opus-mt-en-es";
-
-  /** Hugging Face API key from environment variables. */
-  private readonly HF_API_KEY = process.env.HUGGINGFACE_API_KEY || "";
-
+class MovieController {
   /**
-   * @route GET /sb/:id/subtitles/en
-   * @description Generates English subtitles for an existing movie.
-   * @param {Request} req - Express request object containing the movie ID in `req.params.id`.
+   * @route GET /movies/popular/:pages
+   * @description Fetches popular movies from Pexels, stores them in the database if they do not exist, and returns them.
+   * @param {Request} req - Express request object, containing the number of pages to fetch in `req.params.pages`.
    * @param {Response} res - Express response object.
-   * @returns {Promise<Response>} 200 with the generated English subtitle or an error message.
+   * @returns {Promise<Response>} 200 with an array of movies or 500 if an error occurs.
    * @access Public
    */
-  async generateEnglish(req: Request, res: Response): Promise<Response> {
+  async getPopularMovies(req: Request, res: Response) {
     try {
-      // Extract movie ID from route parameters
-      const { id } = req.params;
+      const pages = Number(req.params.pages);
+      const videos = await getPopularVideos(pages);
+      const movies = [];
 
-      // Search for the movie in the database
-      const movie = await MovieDAO.read(id);
-
-      // If not found, return 404
-      if (!movie) {
-        return res.status(404).json({ message: "Movie not found." });
+      for (const video of videos) {
+        const movie = await this.createMovieFromPexelsData(video);
+        if (movie) movies.push(movie);
       }
 
-      // If no title exists, return 400
-      if (!movie.title) {
-        return res
-          .status(400)
-          .json({ message: "The movie does not have a valid title." });
-      }
-
-      // Use the movie title as the English subtitle
-      const caption = movie.title as string;
-
-      // Return the generated English subtitle
-      return res.status(200).json({
-        message: "English subtitle generated successfully.",
-        subtitle: caption,
-        language: "en",
-      });
+      return res.status(200).json(movies);
     } catch (error) {
-      // Log and handle unexpected errors
-      console.error("Error generating English subtitles:", error);
-      return res
-        .status(500)
-        .json({ message: "Internal error generating subtitles." });
+      console.error("Error al obtener películas populares:", error);
+      return res.status(500).json({ message: "Error al obtener películas populares." });
     }
   }
 
   /**
-   * @route GET /sb/:id/subtitles/es
-   * @description Generates Spanish subtitles by translating the English title using Hugging Face.
-   * @param {Request} req - Express request object containing the movie ID in `req.params.id`.
+   * @route POST /movies/search
+   * @description Searches for movies by category on Pexels, saves them if they do not exist, and returns the results.
+   * @param {Request} req - Express request object containing `category` and optional `pages` in the body.
    * @param {Response} res - Express response object.
-   * @returns {Promise<Response>} 200 with the translated Spanish subtitle or 500 if an error occurs.
+   * @returns {Promise<Response>} 200 with the found movies, 400 if the category is missing, or 500 on error.
    * @access Public
    */
-  async generateSpanish(req: Request, res: Response): Promise<Response> {
+  async searchMoviesByCategory(req: Request, res: Response) {
     try {
-      // Extract movie ID from route parameters
-      const { id } = req.params;
+      const category = String(req.body.category);
+      const pages = Number(req.body.pages);
 
-      // Find the movie in the database
-      const movie = await MovieDAO.read(id);
-
-      // If the movie does not exist, return 404
-      if (!movie) {
-        return res.status(404).json({ message: "Movie not found." });
+      if (!category) {
+        return res.status(400).json({ message: "Debes proporcionar una categoría o término de búsqueda." });
       }
 
-      // If the movie has no title, translation cannot proceed
-      if (!movie.title) {
-        return res
-          .status(400)
-          .json({ message: "The movie does not have a valid title." });
+      const videos = await searchVideos(category, pages);
+      const movies = [];
+
+      for (const video of videos) {
+        const movie = await this.createMovieFromPexelsData(video);
+        if (movie) movies.push(movie);
       }
 
-      // Original movie title (assumed to be in English)
-      const originalTitle = movie.title as string;
-
-      // Translate the title from English to Spanish
-      const translatedCaption = await this.translateToSpanish(originalTitle);
-
-      // Optionally, update the movie description if it's different from the new translation
-      if (movie.description !== translatedCaption) {
-        movie.description = translatedCaption;
-        await movie.save();
-      }
-
-      // Respond with the translated subtitle
-      return res.status(200).json({
-        message: "Spanish subtitle generated successfully.",
-        subtitle: translatedCaption,
-        language: "es",
-        original: originalTitle,
-      });
+      return res.status(200).json(movies);
     } catch (error) {
-      // Handle any runtime errors
-      console.error("Error generating Spanish subtitles:", error);
-      return res
-        .status(500)
-        .json({ message: "Internal error generating subtitles." });
+      console.error("Error al buscar películas:", error);
+      return res.status(500).json({ message: "Error al buscar películas." });
     }
   }
 
   /**
-   * Translates a given text from English to Spanish using the Hugging Face API.
-   * Model used: `Helsinki-NLP/opus-mt-en-es`.
-   *
+   * @route GET /movies
+   * @description Retrieves all locally stored movies from the database.
+   * @param {Request} req - Express request object.
+   * @param {Response} res - Express response object.
+   * @returns {Promise<Response>} 200 with an array of movies or 500 if an error occurs.
+   * @access Public
+   */
+  async getAllMovies(req: Request, res: Response) {
+    try {
+      const movies = await MovieDAO.getAll();
+      return res.status(200).json(movies);
+    } catch (error) {
+      console.error("Error al obtener películas:", error);
+      return res.status(500).json({ message: "Error al obtener las películas locales." });
+    }
+  }
+
+  /**
+   * @route GET /movies/:id
+   * @description Retrieves a movie by its ID from the database.
+   * @param {Request} req - Express request object containing the movie ID in `req.params.id`.
+   * @param {Response} res - Express response object.
+   * @returns {Promise<Response>} 200 with the movie, 404 if not found, or 500 if an error occurs.
+   * @access Public
+   */
+  async getMovieById(req: Request, res: Response) {
+    try {
+      const movieId = req.params.id;
+      const movie = await MovieDAO.read(movieId);
+      if (!movie) {
+        return res.status(404).json({ message: "Película no encontrada." });
+      }
+      return res.status(200).json(movie);
+    } catch (error) {
+      console.error("Error al obtener película por ID:", error);
+      return res.status(500).json({ message: "Error al obtener la película." });
+    }
+  }
+
+  /**
+   * @description Creates a movie document from Pexels data if it does not already exist in the database.
    * @private
-   * @param {string} text - The English text to translate.
-   * @returns {Promise<string>} The translated text in Spanish, or the original text if an error occurs.
+   * @param {any} pexelsData - The raw video data obtained from the Pexels API.
+   * @returns {Promise<object|null>} The created or existing movie document, or null if an error occurs.
    */
-  private async translateToSpanish(text: string): Promise<string> {
+  private async createMovieFromPexelsData(pexelsData: any) {
     try {
-      // Warn if the API key is not configured
-      if (!this.HF_API_KEY) {
-        console.warn("HUGGINGFACE_API_KEY is not set. Returning original text.");
-        return text;
-      }
+      const existing = await MovieDAO.findByPexelsId(pexelsData.id);
+      if (existing) return existing; // Evita duplicados
 
-      // Send translation request to Hugging Face
-      const response = await fetch(this.HF_API_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.HF_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          inputs: text, // Text to translate
-          options: {
-            wait_for_model: true, // Wait until the model is ready
-          },
-        }),
+      const movie = await MovieDAO.create({
+        pexelsId: pexelsData.id,
+        title: this.formatTitleFromUrl(pexelsData.url),
+        imageUrl: pexelsData.image,
+        videoUrl: pexelsData.video_files[0]?.link,
+        duration: pexelsData.duration,
+        author: pexelsData.user.name,
+        description: `Video creado por ${pexelsData.user.name} traído de Pexels`,
       });
 
-      // If API response is not successful, throw an error
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Hugging Face API error:", errorText);
-        throw new Error(`Translation failed with status ${response.status}`);
-      }
-
-      // Parse the JSON response
-      const data = await response.json();
-
-      // Hugging Face returns an array with `translation_text` property
-      if (data && data[0] && data[0].translation_text) {
-        return data[0].translation_text;
-      }
-
-      // If format is not as expected, throw an error
-      throw new Error("Unexpected response format from Hugging Face API.");
+      return movie;
     } catch (error) {
-      // Log error and return original text to avoid breaking the flow
-      console.error("Error translating text via Hugging Face:", error);
-      return text;
+      console.error("Error al crear película desde datos de Pexels:", error);
+      return null;
     }
+  }
+
+  /**
+   * @description Cleans up and formats a title extracted from a Pexels URL.
+   * @private
+   * @param {string} url - The Pexels video URL.
+   * @returns {string} A formatted movie title.
+   */
+  private formatTitleFromUrl(url: string): string {
+    return (
+      url
+        ?.split("/video/")[1]
+        ?.replace(/-/g, " ")
+        ?.replace(/\d+\/?$/, "")
+        ?.trim() || "Sin título"
+    );
   }
 }
 
-// Export a single instance of the controller
-export default new SubtitleController();
+export default new MovieController();
+

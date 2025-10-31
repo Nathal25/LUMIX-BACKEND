@@ -1,162 +1,176 @@
 import { Request, Response } from "express";
 import MovieDAO from "../dao/MovieDAO";
 
-// Controlador que maneja la generacion de subtitulos
+/**
+ * Controller responsible for generating subtitles in different languages.
+ * It can return English subtitles based on the movie title
+ * or translate them into Spanish using the Hugging Face translation API.
+ */
 class SubtitleController {
-  // URL de la API de Hugging Face para traducir de ingles a espanol
-  private readonly HF_API_URL = "https://api-inference.huggingface.co/models/Helsinki-NLP/opus-mt-en-es";
+  /** Hugging Face translation model URL (English → Spanish). */
+  private readonly HF_API_URL =
+    "https://api-inference.huggingface.co/models/Helsinki-NLP/opus-mt-en-es";
 
-  // Clave de acceso a la API de Hugging Face
+  /** Hugging Face API key from environment variables. */
   private readonly HF_API_KEY = process.env.HUGGINGFACE_API_KEY || "";
 
   /**
    * @route GET /sb/:id/subtitles/en
-   * @description Genera subtitulos en ingles para un video existente.
+   * @description Generates English subtitles for an existing movie.
+   * @param {Request} req - Express request object containing the movie ID in `req.params.id`.
+   * @param {Response} res - Express response object.
+   * @returns {Promise<Response>} 200 with the generated English subtitle or an error message.
+   * @access Public
    */
   async generateEnglish(req: Request, res: Response): Promise<Response> {
     try {
-      // Se obtiene el id desde los parametros de la ruta
+      // Extract movie ID from route parameters
       const { id } = req.params;
 
-      // Se busca la pelicula en la base de datos por su id
+      // Search for the movie in the database
       const movie = await MovieDAO.read(id);
 
-      // Si no existe, se responde con error 404
+      // If not found, return 404
       if (!movie) {
-        return res.status(404).json({ message: "Pelicula no encontrada." });
+        return res.status(404).json({ message: "Movie not found." });
       }
 
-      // Si no tiene titulo, se devuelve error 400
+      // If no title exists, return 400
       if (!movie.title) {
-        return res.status(400).json({ 
-          message: "La pelicula no tiene titulo disponible." 
-        });
+        return res
+          .status(400)
+          .json({ message: "The movie does not have a valid title." });
       }
 
-      // Se asigna el titulo como subtitulo (en ingles)
+      // Use the movie title as the English subtitle
       const caption = movie.title as string;
 
-      // Se responde con exito, incluyendo el subtitulo generado
+      // Return the generated English subtitle
       return res.status(200).json({
-        message: "Subtitulo en ingles generado exitosamente.",
+        message: "English subtitle generated successfully.",
         subtitle: caption,
-        language: "en"
+        language: "en",
       });
-
     } catch (error) {
-      // Si ocurre un error inesperado, se captura y se informa
-      console.error("Error al generar subtitulos en ingles:", error);
-      return res.status(500).json({ 
-        message: "Error interno al generar subtitulos." 
-      });
+      // Log and handle unexpected errors
+      console.error("Error generating English subtitles:", error);
+      return res
+        .status(500)
+        .json({ message: "Internal error generating subtitles." });
     }
   }
 
   /**
    * @route GET /sb/:id/subtitles/es
-   * @description Genera subtitulos en espanol (traducidos desde ingles) para un video existente.
+   * @description Generates Spanish subtitles by translating the English title using Hugging Face.
+   * @param {Request} req - Express request object containing the movie ID in `req.params.id`.
+   * @param {Response} res - Express response object.
+   * @returns {Promise<Response>} 200 with the translated Spanish subtitle or 500 if an error occurs.
+   * @access Public
    */
   async generateSpanish(req: Request, res: Response): Promise<Response> {
     try {
-      // Se obtiene el id desde los parametros
+      // Extract movie ID from route parameters
       const { id } = req.params;
 
-      // Se busca la pelicula en la base de datos
+      // Find the movie in the database
       const movie = await MovieDAO.read(id);
 
-      // Si no se encuentra, se responde con error 404
+      // If the movie does not exist, return 404
       if (!movie) {
-        return res.status(404).json({ message: "Pelicula no encontrada." });
+        return res.status(404).json({ message: "Movie not found." });
       }
 
-      // Si la pelicula no tiene titulo, no se puede traducir
+      // If the movie has no title, translation cannot proceed
       if (!movie.title) {
-        return res.status(400).json({ 
-          message: "La pelicula no tiene titulo disponible." 
-        });
+        return res
+          .status(400)
+          .json({ message: "The movie does not have a valid title." });
       }
 
-      // Se obtiene el titulo original en ingles
+      // Original movie title (assumed to be in English)
       const originalTitle = movie.title as string;
 
-      // Se traduce el titulo al espanol usando la API de Hugging Face
+      // Translate the title from English to Spanish
       const translatedCaption = await this.translateToSpanish(originalTitle);
 
-      // (Opcional) Si la descripcion no es igual a la traduccion, se actualiza en la base de datos
+      // Optionally, update the movie description if it's different from the new translation
       if (movie.description !== translatedCaption) {
         movie.description = translatedCaption;
         await movie.save();
       }
 
-      // Se devuelve el resultado de la traduccion
+      // Respond with the translated subtitle
       return res.status(200).json({
-        message: "Subtitulo en espanol generado exitosamente.",
+        message: "Spanish subtitle generated successfully.",
         subtitle: translatedCaption,
         language: "es",
-        original: originalTitle
+        original: originalTitle,
       });
-
     } catch (error) {
-      // Manejo de errores generales
-      console.error("Error al generar subtitulos en espanol:", error);
-      return res.status(500).json({ 
-        message: "Error interno al generar subtitulos." 
-      });
+      // Handle any runtime errors
+      console.error("Error generating Spanish subtitles:", error);
+      return res
+        .status(500)
+        .json({ message: "Internal error generating subtitles." });
     }
   }
 
   /**
-   * Metodo privado que traduce texto de ingles a espanol usando Hugging Face
-   * Modelo utilizado: Helsinki-NLP/opus-mt-en-es
+   * Translates a given text from English to Spanish using the Hugging Face API.
+   * Model used: `Helsinki-NLP/opus-mt-en-es`.
+   *
+   * @private
+   * @param {string} text - The English text to translate.
+   * @returns {Promise<string>} The translated text in Spanish, or the original text if an error occurs.
    */
   private async translateToSpanish(text: string): Promise<string> {
     try {
-      // Si no hay clave configurada, se avisa y se devuelve el texto original
+      // Warn if the API key is not configured
       if (!this.HF_API_KEY) {
-        console.warn("HUGGINGFACE_API_KEY no configurada, usando texto original");
+        console.warn("HUGGINGFACE_API_KEY is not set. Returning original text.");
         return text;
       }
 
-      // Se realiza la peticion HTTP POST a la API de Hugging Face
+      // Send translation request to Hugging Face
       const response = await fetch(this.HF_API_URL, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${this.HF_API_KEY}`, // token de acceso
-          "Content-Type": "application/json"
+          Authorization: `Bearer ${this.HF_API_KEY}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          inputs: text, // texto a traducir
+          inputs: text, // Text to translate
           options: {
-            wait_for_model: true // indica que espere a que el modelo este listo
-          }
-        })
+            wait_for_model: true, // Wait until the model is ready
+          },
+        }),
       });
 
-      // Si la respuesta no es exitosa (status != 200), se lanza un error
+      // If API response is not successful, throw an error
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Error en Hugging Face API:", errorText);
-        throw new Error(`Error de traduccion: ${response.status}`);
+        console.error("Hugging Face API error:", errorText);
+        throw new Error(`Translation failed with status ${response.status}`);
       }
 
-      // Se parsea la respuesta JSON
+      // Parse the JSON response
       const data = await response.json();
-      
-      // Hugging Face devuelve un arreglo con objetos que contienen "translation_text"
+
+      // Hugging Face returns an array with `translation_text` property
       if (data && data[0] && data[0].translation_text) {
         return data[0].translation_text;
       }
 
-      // Si no viene en el formato esperado, se lanza error
-      throw new Error("Formato de respuesta inesperado");
-
+      // If format is not as expected, throw an error
+      throw new Error("Unexpected response format from Hugging Face API.");
     } catch (error) {
-      // Si ocurre algun error durante la traduccion, se muestra y se devuelve el texto original
-      console.error("Error al traducir con Hugging Face:", error);
+      // Log error and return original text to avoid breaking the flow
+      console.error("Error translating text via Hugging Face:", error);
       return text;
     }
   }
 }
 
-// Se exporta una instancia del controlador
+// Export a single instance of the controller
 export default new SubtitleController();
