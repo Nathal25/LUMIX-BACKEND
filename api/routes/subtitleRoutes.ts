@@ -1,6 +1,5 @@
 import express from "express";
 import SubtitleController from "../controllers/SubtitleController";
-import SubtitleController2 from "../services/Prueba";
 
 const router = express.Router();
 
